@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
-export default function Home() {
+import {handleUserOnboarding} from "@/modules/auth/actions"
+import {UserButton} from "@clerk/nextjs"
+export default async function Home() {
+
+  await handleUserOnboarding()
+
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <Button>Click me</Button>
+      <UserButton />
     </div>
   );
 }
