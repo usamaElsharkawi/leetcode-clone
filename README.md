@@ -249,3 +249,200 @@ Without the double cast, TypeScript complains that `typeof globalThis` and `{ pr
 ---
 
 *Documentation is a living artifact — updated as understanding deepens.*
+
+---
+
+### 10. What is Clerk?
+
+<details>
+<summary><strong>10. What is Clerk?</strong></summary>
+
+**Definition:** Clerk is a **User Management & Authentication Platform as a Service**. It handles the complex security infrastructure of authentication so you don't have to build it yourself.
+
+**The problem it solves:** Building authentication from scratch requires solving dozens of hard problems — password hashing, session management, JWT signing, OAuth flows, email verification, CSRF protection, rate limiting, MFA, and more. Getting any of these wrong compromises your users' security.
+
+**What Clerk provides:**
+- Pre-built sign-in/sign-up UI components (`<SignIn />`, `<SignUp />`)
+- Session management (cookies, JWTs, token refresh)
+- OAuth providers (Google, GitHub, 30+ more)
+- User profile management (`<UserButton />`, `<UserProfile />`)
+- Server helpers (`auth()`, `currentUser()`)
+- Middleware for route protection (`clerkMiddleware()`)
+- Admin dashboard for managing users
+
+**Analogy:** Clerk is like a hotel's **front desk** — they handle check-in, keys, and identity verification. You handle what happens inside the room (your application logic).
+
+**How it fits in our stack:**
+
+```
+proxy.ts (clerkMiddleware) → checks session → protects routes
+    ↓
+layout.tsx (ClerkProvider) → provides user context to components
+    ↓
+Your components (auth()) → reads user ID for database queries
+```
+
+</details>
+
+---
+
+### 11. What is `clerkMiddleware()`?
+
+<details>
+<summary><strong>11. What is `clerkMiddleware()`?</strong></summary>
+
+**Definition:** A request interceptor that runs on every incoming HTTP request **before** it reaches your route handler.
+
+**What it does:**
+1. Reads the session cookie from the request
+2. Verifies the JWT signature using your `CLERK_SECRET_KEY`
+3. Checks if the session is expired
+4. If invalid/expired → redirects to `/sign-in`
+5. If valid → attaches user info to the request and passes through
+
+**Analogy:** The **bouncer** at a club entrance — checks ID before letting anyone in.
+
+**Our proxy.ts (middleware file):**
+
+```typescript
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect();
+  }
+})
+
+export const config = {
+  matcher: [
+    '/((?!_next|.*\\..*).*)',
+    '/(api|trpc)(.*)',
+    '/__clerk/(.*)',
+  ],
+}
+```
+
+**Key concepts:**
+- `createRouteMatcher(["..."])` — Defines which routes are public (no auth required)
+- `auth.protect()` — Blocks the request if no valid session exists
+- `matcher` config — Tells Next.js which routes should trigger the middleware (avoids running on static files)
+
+</details>
+
+---
+
+### 12. Route Groups `(auth)`
+
+<details>
+<summary><strong>12. Route Groups `(auth)`</strong></summary>
+
+**Definition:** A folder wrapped in parentheses `()` is a **route group** — it's ignored in the URL path. Used purely for organizing related routes.
+
+**The problem:** Without route groups, every folder in `app/` maps to a URL segment. To group auth pages, you'd get `/auth/sign-in` instead of `/sign-in`.
+
+**Solution:**
+
+```
+app/
+├── (auth)/                  ← Not a URL segment
+│   ├── sign-in/
+│   │   └── page.tsx         →  /sign-in
+│   └── sign-up/
+│       └── page.tsx         →  /sign-up
+│
+├── problems/
+│   └── page.tsx             →  /problems
+│
+└── page.tsx                 →  /
+```
+
+**Benefits:**
+- Organizes related pages without affecting URLs
+- Can have its own `layout.tsx` that only applies to auth pages
+- Root layout still wraps everything — route group layouts are **nested inside**, not replacing
+
+**Layout hierarchy:**
+
+```
+<RootLayout>                    ← app/layout.tsx (html, body, ClerkProvider)
+  <AuthLayout (optional)>       ← app/(auth)/layout.tsx (centered card)
+    <SignInPage />
+  </AuthLayout>
+</RootLayout>
+```
+
+</details>
+
+---
+
+### 13. Optional Catch-All Routes `[[...param]]`
+
+<details>
+<summary><strong>13. Optional Catch-All Routes `[[...param]]`</strong></summary>
+
+**Definition:** A route pattern that matches both the root path AND any sub-paths underneath it.
+
+**The problem:** Clerk's `<SignIn />` handles multiple stages — `/sign-in`, `/sign-in/forgot-password`, `/sign-in/sso-callback`. You don't know all sub-paths Clerk might use.
+
+**Solution:** `[[...sign-in]]` — the optional catch-all:
+
+```
+app/(auth)/sign-in/[[...sign-in]]/page.tsx
+
+/sign-in              →  matches ✅ (slug = undefined)
+/sign-in/forgot-password → matches ✅ (slug = ["forgot-password"])
+/sign-in/sso/callback →  matches ✅ (slug = ["sso", "callback"])
+```
+
+**Syntax comparison:**
+
+| Pattern | `/sign-in` | `/sign-in/forgot` |
+|---------|-----------|------------------|
+| `[slug]` | ❌ No match | ✅ `slug = "forgot"` |
+| `[...slug]` | ❌ No match | ✅ `slug = ["forgot"]` |
+| `[[...slug]]` | ✅ `slug = undefined` | ✅ `slug = ["forgot"]` |
+
+**The double brackets `[[ ]]` make it optional** — without them, `/sign-in` would return 404.
+
+</details>
+
+---
+
+### 14. Layout Nesting: Root vs Route Group Layouts
+
+<details>
+<summary><strong>14. Layout Nesting: Root vs Route Group Layouts</strong></summary>
+
+**Core rule:** Layouts **nest**, they don't **replace**. A route group layout is always nested inside the root layout.
+
+| Question | Answer |
+|----------|--------|
+| Does auth layout **replace** root layout? | ❌ No |
+| Is auth layout **nested inside** root layout? | ✅ Yes |
+| What if no auth layout exists? | Page goes directly inside root layout |
+
+**Visual hierarchy:**
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Root Layout (app/layout.tsx)                        │
+│  ┌─ <html> ──────────────────────────────────────┐  │
+│  │  <body>                                       │  │
+│  │  Navbar, Footer, ClerkProvider                │  │
+│  │                                               │  │
+│  │  ┌─ Auth Layout (app/(auth)/layout.tsx) ───┐ │  │
+│  │  │  Centered card, no navbar               │ │  │
+│  │  │  ┌─ <SignIn /> ──────────────────────┐  │ │  │
+│  │  │  └───────────────────────────────────┘  │ │  │
+│  │  └─────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
+```
+
+</details>
+
+---
+
+*Documentation is a living artifact — updated as understanding deepens.*
