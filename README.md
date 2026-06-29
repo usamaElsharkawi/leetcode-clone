@@ -446,3 +446,175 @@ app/(auth)/sign-in/[[...sign-in]]/page.tsx
 ---
 
 *Documentation is a living artifact — updated as understanding deepens.*
+
+---
+
+### 15. Null Safety in Auth Functions
+
+<details>
+<summary><strong>15. Null Safety in Auth Functions</strong></summary>
+
+**Core Problem:** Clerk's auth() returns userId: string | null, but Prisma expects string | undefined.
+
+```typescript
+const { userId } = await auth()
+await prisma.user.findUnique({ where: { clerkId: userId } })
+// error: null not assignable to undefined
+```
+
+**Fix:** Early return pattern
+
+```typescript
+export async function getCurrentUserRole() {
+  const { userId } = await auth()
+  if (!userId) return null
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { role: true }
+  })
+  return user?.role
+}
+```
+
+**Golden Rule:** Handle null explicitly before any Prisma query.
+
+</details>
+
+---
+
+### 16. `id` vs `clerkId` — Two ID Spaces
+
+<details>
+<summary><strong>16. `id` vs `clerkId`</strong></summary>
+
+**Core Problem:** Your app touches two systems with different ID schemes.
+
+```
+Clerk: "user_2qX8..."    You: "cly8h3j2..."
+(clerkId)                (id)
+```
+
+**Rule of Thumb:**
+
+> Use clerkId **once** to find the user. Then use your internal id forever.
+
+```typescript
+const { userId: clerkId } = await auth()
+const user = await prisma.user.findUnique({ where: { clerkId } })
+await prisma.submission.create({ data: { userId: user.id } })
+```
+
+| | `id` | `clerkId` |
+|---|------|----------|
+| Who assigns? | Your system | Clerk |
+| Used in foreign keys? | All your tables | Never |
+| Survives provider swap? | Yes | No |
+
+</details>
+
+---
+
+### 17. upsert - Atomic Create-or-Update
+
+<details>
+<summary><strong>17. upsert</strong></summary>
+
+One operation: create if missing, update if exists. No race conditions.
+
+```typescript
+const user = await prisma.user.upsert({
+  where: { clerkId: "abc" },
+  update: { lastActiveAt: new Date() },
+  create: { clerkId: "abc", xp: 0 }
+})
+```
+
+Best for: Lazy user creation on first visit.
+
+</details>
+
+---
+
+### 18. Enums: Prisma vs TypeScript
+
+<details>
+<summary><strong>18. Enums: Prisma vs TypeScript</strong></summary>
+
+Prisma enums generate BOTH a database ENUM type AND a TypeScript enum from one definition.
+
+Generates:
+- PostgreSQL: CREATE TYPE "Difficulty" AS ENUM (...)
+- TypeScript: export enum Difficulty { EASY = 'EASY', ... }
+
+| Layer | When enforced |
+|-------|--------------|
+| TypeScript | Compile time |
+| PostgreSQL | Runtime |
+
+Pure TS enum = compile-time only, no DB enforcement.
+
+</details>
+
+---
+
+### 19. TypeScript = Compile-Time Safety Layer
+
+<details>
+<summary><strong>19. TypeScript = Compile-Time Safety Layer</strong></summary>
+
+TypeScript is a compile-time safety layer over JavaScript. Types are erased at runtime; only pure JS ships.
+
+```
+.ts (typed) -> tsc -> .js (no types) -> runtime
+```
+
+What you get: Compile-time errors, autocomplete, self-documenting code.
+What you DON'T get: Runtime type checking.
+
+Analogy: TypeScript is makeup on JavaScript's face. Washed off at runtime.
+
+</details>
+
+---
+
+### 20. createdAt and updatedAt
+
+<details>
+<summary><strong>20. createdAt and updatedAt</strong></summary>
+
+Without timestamps, your database is a bag of unordered facts.
+
+```prisma
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+```
+
+| Use Case | Field |
+|----------|-------|
+| Newest first | createdAt |
+| Recently active | updatedAt |
+| Debugging | updatedAt |
+| Retention analysis | createdAt |
+
+Never omit them.
+
+</details>
+
+---
+
+### 21. Server Actions vs Route Handlers vs Server Components
+
+<details>
+<summary><strong>21. SA vs RH vs RSC</strong></summary>
+
+| Pattern | Purpose | When to Use |
+|---------|---------|-------------|
+| Server Component | Fetch data for render | 90% of pages |
+| Route Handler | Shared API endpoint | Multiple consumers |
+| Server Action | Form mutations | Forms, optimistic updates |
+
+Server Actions are MUTATION-only. Using them for queries is an anti-pattern.
+
+Rule: Fetching data -> RSC. Forms -> Server Action. Shared API -> Route Handler.
+
+</details>
