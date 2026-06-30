@@ -141,8 +141,6 @@ This generates: `CREATE TABLE "User"`, `interface User`, `prisma.user.findMany(.
 
 ---
 
-### 6. PrismaClient & The Adapter Pattern
-
 <details>
 <summary><strong>6. PrismaClient & The Adapter Pattern</strong></summary>
 
@@ -248,12 +246,6 @@ Without the double cast, TypeScript complains that `typeof globalThis` and `{ pr
 
 ---
 
-*Documentation is a living artifact — updated as understanding deepens.*
-
----
-
-### 10. What is Clerk?
-
 <details>
 <summary><strong>10. What is Clerk?</strong></summary>
 
@@ -286,10 +278,8 @@ Your components (auth()) → reads user ID for database queries
 
 ---
 
-### 11. What is `clerkMiddleware()`?
-
 <details>
-<summary><strong>11. What is `clerkMiddleware()`?</strong></summary>
+<summary><strong>11. What is <code>clerkMiddleware()</code>?</strong></summary>
 
 **Definition:** A request interceptor that runs on every incoming HTTP request **before** it reaches your route handler.
 
@@ -333,10 +323,8 @@ export const config = {
 
 ---
 
-### 12. Route Groups `(auth)`
-
 <details>
-<summary><strong>12. Route Groups `(auth)`</strong></summary>
+<summary><strong>12. Route Groups <code>(auth)</code></strong></summary>
 
 **Definition:** A folder wrapped in parentheses `()` is a **route group** — it's ignored in the URL path. Used purely for organizing related routes.
 
@@ -377,10 +365,8 @@ app/
 
 ---
 
-### 13. Optional Catch-All Routes `[[...param]]`
-
 <details>
-<summary><strong>13. Optional Catch-All Routes `[[...param]]`</strong></summary>
+<summary><strong>13. Optional Catch-All Routes <code>[[...param]]</code></strong></summary>
 
 **Definition:** A route pattern that matches both the root path AND any sub-paths underneath it.
 
@@ -409,8 +395,6 @@ app/(auth)/sign-in/[[...sign-in]]/page.tsx
 </details>
 
 ---
-
-### 14. Layout Nesting: Root vs Route Group Layouts
 
 <details>
 <summary><strong>14. Layout Nesting: Root vs Route Group Layouts</strong></summary>
@@ -445,16 +429,10 @@ app/(auth)/sign-in/[[...sign-in]]/page.tsx
 
 ---
 
-*Documentation is a living artifact — updated as understanding deepens.*
-
----
-
-### 15. Null Safety in Auth Functions
-
 <details>
 <summary><strong>15. Null Safety in Auth Functions</strong></summary>
 
-**Core Problem:** Clerk's auth() returns userId: string | null, but Prisma expects string | undefined.
+**Core Problem:** Clerk's `auth()` returns `userId: string | null`, but Prisma expects `string | undefined`.
 
 ```typescript
 const { userId } = await auth()
@@ -482,10 +460,8 @@ export async function getCurrentUserRole() {
 
 ---
 
-### 16. `id` vs `clerkId` — Two ID Spaces
-
 <details>
-<summary><strong>16. `id` vs `clerkId`</strong></summary>
+<summary><strong>16. <code>id</code> vs <code>clerkId</code> — Two ID Spaces</strong></summary>
 
 **Core Problem:** Your app touches two systems with different ID schemes.
 
@@ -496,7 +472,7 @@ Clerk: "user_2qX8..."    You: "cly8h3j2..."
 
 **Rule of Thumb:**
 
-> Use clerkId **once** to find the user. Then use your internal id forever.
+> Use `clerkId` **once** to find the user. Then use your internal `id` forever.
 
 ```typescript
 const { userId: clerkId } = await auth()
@@ -514,10 +490,8 @@ await prisma.submission.create({ data: { userId: user.id } })
 
 ---
 
-### 17. upsert - Atomic Create-or-Update
-
 <details>
-<summary><strong>17. upsert</strong></summary>
+<summary><strong>17. upsert — Atomic Create-or-Update</strong></summary>
 
 One operation: create if missing, update if exists. No race conditions.
 
@@ -535,21 +509,27 @@ Best for: Lazy user creation on first visit.
 
 ---
 
-### 18. Enums: Prisma vs TypeScript
-
 <details>
 <summary><strong>18. Enums: Prisma vs TypeScript</strong></summary>
 
 Prisma enums generate BOTH a database ENUM type AND a TypeScript enum from one definition.
 
+```prisma
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+```
+
 Generates:
-- PostgreSQL: CREATE TYPE "Difficulty" AS ENUM (...)
-- TypeScript: export enum Difficulty { EASY = 'EASY', ... }
+- PostgreSQL: `CREATE TYPE "Difficulty" AS ENUM (...)`
+- TypeScript: `export enum Difficulty { EASY = 'EASY', ... }`
 
 | Layer | When enforced |
 |-------|--------------|
 | TypeScript | Compile time |
-| PostgreSQL | Runtime |
+| PostgreSQL | Runtime (DB constraint) |
 
 Pure TS enum = compile-time only, no DB enforcement.
 
@@ -557,30 +537,26 @@ Pure TS enum = compile-time only, no DB enforcement.
 
 ---
 
-### 19. TypeScript = Compile-Time Safety Layer
-
 <details>
-<summary><strong>19. TypeScript = Compile-Time Safety Layer</strong></summary>
+<summary><strong>19. TypeScript — Compile-Time Safety Layer</strong></summary>
 
 TypeScript is a compile-time safety layer over JavaScript. Types are erased at runtime; only pure JS ships.
 
 ```
-.ts (typed) -> tsc -> .js (no types) -> runtime
+.ts (typed) → tsc → .js (no types) → runtime
 ```
 
-What you get: Compile-time errors, autocomplete, self-documenting code.
-What you DON'T get: Runtime type checking.
+What you get: Compile-time errors, autocomplete, self-documenting code.  
+What you **don't** get: Runtime type checking.
 
-Analogy: TypeScript is makeup on JavaScript's face. Washed off at runtime.
+**Analogy:** TypeScript is makeup on JavaScript's face — washed off at runtime.
 
 </details>
 
 ---
 
-### 20. createdAt and updatedAt
-
 <details>
-<summary><strong>20. createdAt and updatedAt</strong></summary>
+<summary><strong>20. <code>createdAt</code> and <code>updatedAt</code></strong></summary>
 
 Without timestamps, your database is a bag of unordered facts.
 
@@ -591,10 +567,10 @@ updatedAt DateTime @updatedAt
 
 | Use Case | Field |
 |----------|-------|
-| Newest first | createdAt |
-| Recently active | updatedAt |
-| Debugging | updatedAt |
-| Retention analysis | createdAt |
+| Newest first | `createdAt` |
+| Recently active | `updatedAt` |
+| Debugging | `updatedAt` |
+| Retention analysis | `createdAt` |
 
 Never omit them.
 
@@ -602,10 +578,8 @@ Never omit them.
 
 ---
 
-### 21. Server Actions vs Route Handlers vs Server Components
-
 <details>
-<summary><strong>21. SA vs RH vs RSC</strong></summary>
+<summary><strong>21. Server Actions vs Route Handlers vs Server Components</strong></summary>
 
 | Pattern | Purpose | When to Use |
 |---------|---------|-------------|
@@ -613,8 +587,207 @@ Never omit them.
 | Route Handler | Shared API endpoint | Multiple consumers |
 | Server Action | Form mutations | Forms, optimistic updates |
 
-Server Actions are MUTATION-only. Using them for queries is an anti-pattern.
+Server Actions are **mutation-only**. Using them for queries is an anti-pattern.
 
-Rule: Fetching data -> RSC. Forms -> Server Action. Shared API -> Route Handler.
+**Rule:** Fetching data → RSC. Forms → Server Action. Shared API → Route Handler.
 
 </details>
+
+---
+
+<details>
+<summary><strong>22. CSS Custom Properties as Design Tokens</strong></summary>
+
+**Core Problem:** Color information scattered at every usage site — `text-gray-900 dark:text-white`, `text-amber-600 dark:text-amber-400` — 28+ pairs across multiple files. Changing the brand color requires a grep operation with no compile-time guarantee you found everything.
+
+**Solution:** CSS custom properties are **pointers in the browser's cascade**. The component holds an indirection, not a literal. The `.dark` class on `<html>` redefines what the pointer points to — the component never changes.
+
+```css
+:root  { --amber-fill: oklch(0.72 0.22 86.05); }
+.dark  { --amber-fill: oklch(0.78 0.22 85.67); }
+```
+
+```tsx
+{/* One class — reads whichever value is active */}
+className="bg-[var(--amber-fill)]"
+```
+
+**Why OKLCH over HSL?** OKLCH is perceptually uniform — equal chroma steps produce equal perceived saturation at any lightness. HSL is not: `hsl(84, 100%, 50%)` and `hsl(264, 100%, 50%)` appear wildly different in perceived brightness. OKLCH lets you build a balanced palette without manual correction.
+
+**The token taxonomy we use:**
+
+| Token suffix | Role |
+|---|---|
+| `--*-bg` | Tinted surface background |
+| `--*-bg-hover` | Hover state of the surface |
+| `--*-text` | Readable text on neutral backgrounds |
+| `--*-text-emphasis` | Bold accent text, hover states |
+| `--*-fill` | Solid button/badge background |
+| `--*-border` | Card/input border |
+| `--*-border-hover` | Border on card hover |
+
+**Rule:** A CSS variable is cheaper than a JS theme context — zero JS executes, no hydration mismatch, resolved before first paint.
+
+</details>
+
+---
+
+<details>
+<summary><strong>23. Static Data Hoisting</strong></summary>
+
+**Core Problem:** In Next.js, Server Components execute per request. Data arrays defined *inside* the component function are re-allocated on every request — new objects, new strings, work for the garbage collector.
+
+```typescript
+// ❌ Allocated on every request
+export default async function Home() {
+  const features = [{ icon: <Code2 />, title: "..." }]
+}
+
+// ✅ Allocated once at module import
+export const features = [...] as const;
+export default async function Home() { ... }
+```
+
+**The invariant:** Module scope is initialized **once** per process and never freed. It communicates intent: *"this data does not vary between requests."*
+
+**The critical flip side — State Leak:** Only put **immutable** data at module scope. Mutable module-level state in a server handler is a production security bug — one user's data leaks into another user's response because server processes are shared. The rule:
+
+> **Immutable → module scope. Request-scoped → function scope. Always.**
+
+</details>
+
+---
+
+<details>
+<summary><strong>24. JSX in Data Arrays — The Anti-Pattern</strong></summary>
+
+**Core Problem:** Storing rendered JSX nodes inside data arrays mixes data with rendering concerns.
+
+```typescript
+// ❌ JSX in data — type is ReactNode, no closed-set guarantee
+{ icon: <Code2 className="w-6 h-6" />, title: "Interactive Coding" }
+
+// ✅ String identifier — type is "code", closed-set enforced
+{ icon: "code" as const, title: "Interactive Coding" }
+```
+
+**Why this matters:**
+
+1. **Type safety:** `"code" | "trophy" | "users" | "zap"` is a closed union. Misspell it → TypeScript error at compile time. With JSX, only runtime errors after render.
+2. **Separation of concerns:** The data array describes *what* exists (identity). The icon map describes *how* to render it (behavior). Changing icon size, color, or adding accessibility props no longer requires editing the data.
+3. **The icon map pattern:**
+
+```typescript
+const iconMap: Record<FeatureIcon, LucideIcon> = {
+  code: Code2,
+  trophy: Trophy,
+  users: Users,
+  zap: Zap,
+};
+
+const Icon = iconMap[feature.icon]; // TypeScript verifies this key exists
+return <Icon className="w-6 h-6" />;
+```
+
+If you add `"chart"` to the data but forget to add it to `iconMap`, TypeScript errors immediately.
+
+</details>
+
+---
+
+<details>
+<summary><strong>25. Stable React Keys</strong></summary>
+
+**Core Problem:** React's reconciler uses `key` to decide whether to **reuse** or **destroy and recreate** a DOM node. Array index as key breaks this when lists are reordered or filtered.
+
+```tsx
+// ❌ Index key — breaks on reorder/filter
+{stats.map((stat, index) => <div key={index}>)}
+
+// ✅ Stable ID — survives any list operation
+{stats.map((stat) => <div key={stat.id}>)}
+```
+
+**Why it breaks with index:** If you remove index 0, everything shifts. React reuses the DOM node for the old index 0 and patches it with new data — any transition animation, focus state, or input value on that node is now wrong. Users see visual glitches.
+
+**The analogy:** A `key` should identify the **entity**, not its **position** — exactly why databases use UUIDs as primary keys instead of row numbers.
+
+**The practical rule:** For any list that will ever be filtered, sorted, or paginated — use a stable ID. For 100% static, never-reordered lists, index is technically safe but a bad habit.
+
+</details>
+
+---
+
+<details>
+<summary><strong>26. Derived Values & Color Lookup Maps</strong></summary>
+
+**Core Problem:** Coupled ternaries that branch on the same expression create a silent divergence risk.
+
+```tsx
+{/* ❌ Two separate gates for one decision — can silently diverge */}
+className={`
+  ${index % 2 === 0 ? "bg-amber-100" : "bg-indigo-100"}
+  ${index % 2 === 0 ? "text-amber-600" : "text-indigo-600"}
+`}
+```
+
+**Solution:** Derive the decision **once**, then look up all consequences from a map.
+
+```typescript
+// Derived once — single source of truth
+const colorScheme = featureColorCycle[index]; // "amber" | "indigo"
+
+// Lookup maps at module scope — O(1), type-checked
+const iconClasses: Record<CategoryColor, string> = {
+  amber: "bg-[var(--amber-bg)] text-[var(--amber-text-emphasis)]",
+  indigo: "bg-[var(--indigo-bg)] text-[var(--indigo-text-emphasis)]",
+};
+
+// Render reads one value
+className={iconClasses[colorScheme]}
+```
+
+**The scalability payoff:** When you add `"rose"` as a third color, TypeScript immediately errors on every `Record<CategoryColor, string>` map that doesn't include `"rose"`. You cannot forget to handle the new case — the type system finds every location for you.
+
+**The broader pattern:** Anywhere you write `if (x === "a") ... else if (x === "b") ...` in JSX, ask: *should this be a lookup map?* This pattern scales to: difficulty → color, user role → permissions, plan tier → feature flags.
+
+</details>
+
+---
+
+<details>
+<summary><strong>27. Component Extraction — When and Why</strong></summary>
+
+**Core Problem:** A 240-line `page.tsx` mixing server data fetching, hero layout, feature grid, category cards, and a CTA banner is impossible to test in isolation, reuse, or reason about under pressure.
+
+**The extraction rule — not "is it big?" but:**
+> Does this piece have an **independent reason to change**, or is it **reused** in more than one place?
+
+If yes to either → extract. If no to both → inline is fine.
+
+**Rate-of-change analysis for our page:**
+
+| Component | Changes when… | Extract? |
+|---|---|---|
+| `HeroSection` | Marketing copy, A/B test | ✅ Independent change |
+| `FeaturesSection` | Product adds a feature | ✅ Independent change |
+| `CategoriesSection` | Difficulty levels change | ✅ Will be reused on `/problems` |
+| `CtaSection` | Growth team messaging | ✅ Independent change |
+
+**Result:** `page.tsx` becomes an 18-line orchestrator. Each component owns exactly its slice of the page, with its own color maps and imports — fully self-contained.
+
+```
+modules/home/components/
+├── hero-section.tsx       ← badge, heading, CTA buttons, stats
+├── features-section.tsx   ← feature cards with icon map
+├── categories-section.tsx ← difficulty cards with color maps
+└── cta-section.tsx        ← gradient CTA banner
+```
+
+**The architectural principle:** Components are not just visual units — they are **units of independent change**. Extract at the boundary where two things change for different reasons.
+
+</details>
+
+---
+
+*Documentation is a living artifact — updated as understanding deepens.*
