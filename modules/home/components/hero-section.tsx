@@ -10,7 +10,7 @@ export function HeroSection() {
         {/* Badge */}
         <Badge
           variant="secondary"
-          className="mb-8 bg-[var(--amber-bg)] text-[var(--amber-text)] border-[var(--amber-border)] hover:bg-[var(--amber-bg-hover)]"
+          className="mb-8 bg-(--amber-bg) text-(--amber-text) border-(--amber-border) hover:bg-(--amber-bg-hover)"
         >
           <Star className="w-4 h-4 mr-2" />
           Join 10,000+ developers already coding
@@ -45,7 +45,7 @@ export function HeroSection() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
           <Button
             size="lg"
-            className="bg-[var(--amber-fill)] hover:bg-[var(--amber-text-emphasis)] text-[var(--text-on-accent)] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+            className="bg-[var(--amber-fill)] hover:bg-[var(--amber-text-emphasis)] text-[var(--text-on-accent)] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all rounded-xl"
           >
             <Play className="w-5 h-5 mr-2" />
             Start Coding Now

@@ -17,7 +17,7 @@ const iconClasses: Record<CategoryColor, string> = {
   rose:  "bg-[var(--rose-bg)] text-[var(--rose-text-emphasis)]",
 };
 
-// Alternating colour cycle for the 4 feature cards
+// Alternating color cycle for the 4 feature cards
 const colorCycle: CategoryColor[] = ["amber", "indigo", "amber", "indigo"];
 
 export function FeaturesSection() {

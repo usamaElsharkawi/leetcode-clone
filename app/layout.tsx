@@ -51,7 +51,7 @@ export default function RootLayout({
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-          >
+            >
             {children}
           </ThemeProvider>
         </ClerkProvider>
