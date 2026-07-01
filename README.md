@@ -794,6 +794,240 @@ modules/home/components/
 
 ---
 
+<details>
+<summary><strong>28. Judge0 — The Code Execution Engine</strong></summary>
+
+**Core Problem:** Running arbitrary user code on your own server is one of the most dangerous things in software engineering. A user can submit an infinite loop, read your filesystem, open network sockets, or fork thousands of processes — crashing your server for every other user.
+
+**What Judge0 is:** An open-source sandboxed code execution system. It accepts a code submission, runs it inside an isolated container with hard resource limits, and returns the result.
+
+**The sandbox is built on Linux kernel primitives:**
+
+| Primitive | What it enforces |
+|---|---|
+| `cgroups` | CPU time limit, memory limit |
+| `namespaces` | Filesystem and network isolation |
+| `seccomp` | Syscall filtering — blocks dangerous system calls |
+
+These are the same primitives Docker is built on. Each submission gets its own isolated process that cannot see your server's filesystem, network, or other processes.
+
+**What it returns per submission:**
+
+| Field | Meaning |
+|---|---|
+| `stdout` | What the code printed |
+| `stderr` | Error output |
+| `status` | Accepted / Wrong Answer / TLE / Runtime Error / Compilation Error |
+| `time` | Execution time in seconds |
+| `memory` | Memory used in KB |
+
+**Where it fits in the stack:**
+
+```
+Browser → submits code
+    ↓
+Next.js Route Handler  ← validates, authenticates, rate-limits
+    ↓
+Judge0 API             ← sandboxed execution
+    ↓
+Route Handler          ← stores result in DB, returns to browser
+```
+
+**The rule:** Judge0 is a **pure function** — input goes in, output comes out. It has no side effects on your system. Your backend owns all persistence, all business logic, all error responses.
+
+**Deployment options:**
+
+| Option | Setup | Cost at scale | Control |
+|---|---|---|---|
+| RapidAPI (hosted) | 2 minutes | Expensive per-request | None |
+| Self-hosted | Hours (Docker + Linux) | Cheap (your server) | Full |
+
+</details>
+
+---
+
+<details>
+<summary><strong>29. RapidAPI — The API Marketplace</strong></summary>
+
+**What it is:** An API marketplace — the App Store for APIs. One account, one key, one billing dashboard for thousands of third-party APIs (Judge0, weather, currency, translation, etc.).
+
+**The proxy architecture:** RapidAPI sits between your server and the API provider as a reverse proxy. Your key authenticates you to RapidAPI; the provider never sees your identity.
+
+```
+Your server → RapidAPI Gateway (auth + rate limit) → Judge0 servers → back
+```
+
+**The two required headers on every call:**
+
+| Header | Purpose |
+|---|---|
+| `X-RapidAPI-Key` | Your personal key — authenticates you |
+| `X-RapidAPI-Host` | Which API to route to (e.g. `judge0-ce.p.rapidapi.com`) |
+
+**The security rule:** Your RapidAPI key must **never touch the browser**. It lives only in server environment variables. All Judge0 calls go through your Route Handler, which adds the key server-side. This is the BFF pattern — your server is the only entity that knows the key exists.
+
+</details>
+
+---
+
+<details>
+<summary><strong>30. Polling vs Webhooks</strong></summary>
+
+**The problem:** You need to know when something finishes at an unpredictable time in the future (Judge0 execution, Stripe payment, GitHub push).
+
+**Polling (Pull):** You repeatedly ask "is it done yet?" on a timer. Wasted requests, delay equal to polling interval, expensive at scale.
+
+**Webhooks (Push):** You give the provider your server's URL. When they finish, they POST the result to you. One request, zero waste, near-instant.
+
+**The doorbell analogy:** Polling = walking to the front door every 10 minutes to check for a package. Webhook = the driver rings your doorbell when they arrive.
+
+**The critical constraint webhooks introduce:** Your server must be **reachable from the public internet**. `localhost:3000` is not. This is fine in production (real domain) but requires a tunnel tool like ngrok in local development.
+
+**The security problem:** Anyone can POST to your webhook URL. A malicious actor could send fake "Accepted" results. The solution is a **webhook secret** — the provider signs requests with an HMAC hash. Your server verifies the signature before trusting the payload.
+
+| Concern | Polling | Webhooks |
+|---|---|---|
+| Simplicity | Simple — just a loop | Complex — public URL, signature verification |
+| Latency | Up to polling interval | Near-instant |
+| Wasted requests | Many | Zero |
+| Works on localhost | ✅ Yes | ❌ Needs tunnel |
+| Scale cost | High | Low |
+
+**Practical decision:** Polling (or Judge0's synchronous mode) for local development. Webhooks for production at scale.
+
+</details>
+
+---
+
+<details>
+<summary><strong>31. ngrok — A Tunnel to Localhost</strong></summary>
+
+**The problem:** Webhook providers need a public URL to POST back to. `localhost:3000` is unreachable from the internet.
+
+**What ngrok does:** Runs a process on your machine that opens an outbound connection to ngrok's public servers, then gives you a real URL (`https://abc123.ngrok.io`) that forwards all requests through that tunnel to your local port.
+
+```
+Provider → POST https://abc123.ngrok.io/api/webhook
+                ↓ (tunnel, outbound connection already open)
+           your laptop → localhost:3000/api/webhook
+```
+
+**Why it works through firewalls:** Your machine initiates the outbound connection — firewalls block inbound connections, not outbound. ngrok's server just relays through the already-open tunnel.
+
+**The rule:** Strictly a local development tool. In production, your server has a real domain — ngrok is irrelevant.
+
+</details>
+
+---
+
+<details>
+<summary><strong>32. The Problem Model — Schema Design Decisions</strong></summary>
+
+**Our `Problem` model in `schema.prisma`:**
+
+```prisma
+model Problem {
+  id                 String     @id @default(cuid())
+  userId             String
+  title              String
+  description        String
+  difficulty         Difficulty
+  tags               String[]
+  examples           Json
+  constraints        String
+  hints              String?
+  editorial          String?
+  testCases          Json
+  codeSnippets       Json
+  referenceSolutions Json
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+```
+
+**Key decisions and why:**
+
+**`Json` for `testCases`, `codeSnippets`, `referenceSolutions`, `examples`**
+These fields are structured but variable — test cases have inputs and expected outputs, code snippets vary per language, reference solutions vary per language. Storing them as `Json` avoids creating separate tables for each. The trade-off: no column-level indexing or type safety at the DB layer — you validate structure in your application code.
+
+**`String[]` for `tags`**
+PostgreSQL natively supports array columns. A `tags` array on the problem row avoids a separate join table for a simple many-to-many that you only ever query as "give me all tags for this problem." The trade-off: you cannot query "all problems with tag X" efficiently without a GIN index.
+
+**`hints` and `editorial` as optional (`?`)**
+Not every problem has hints or an editorial on creation. Making them nullable means the admin can publish a problem first and add editorial content later — a real product workflow.
+
+**`onDelete: Cascade`**
+If the user who created a problem is deleted, all their problems are deleted too. This prevents orphaned rows with a `userId` pointing to a non-existent user.
+
+**`difficulty` as a Prisma enum**
+Enforced at both the TypeScript layer (compile time) and PostgreSQL layer (runtime DB constraint). A raw `String` field would allow `"VERY_HARD"` or `"easy"` to slip through — the enum makes that impossible at the database level.
+
+</details>
+
+---
+
+<details>
+<summary><strong>33. Responsive Navbar — The Architecture</strong></summary>
+
+**The core problem:** A navbar with three horizontal zones (logo, nav links, auth buttons) overflows on a 375px mobile screen. You have two fundamentally different layout needs for the same content.
+
+**The two concepts used:**
+
+**1. Responsive visibility (`hidden md:flex` / `md:hidden`)**
+Tailwind's `md:` prefix is a min-width breakpoint at 768px. Elements are never removed from the DOM — one is `display: none` at each breakpoint. Desktop links get `hidden md:flex`. The hamburger button gets `md:hidden`.
+
+**2. Controlled open/close state (`useState`)**
+The hamburger toggle requires interactive state — the navbar must become a Client Component (`"use client"`). The architectural rule: keep a Server Component wrapper that reads auth data and passes it as props; make only the interactive shell a client component. The `userRole` prop pattern already satisfies this.
+
+**Auto-close on navigation (`usePathname` + `useEffect`)**
+Without this, the sheet stays open after the user taps a link. `usePathname()` from `next/navigation` gives the current route. A `useEffect` watching `pathname` calls `setOpen(false)` — handles both link clicks and the browser back button.
+
+**Why shadcn `<Sheet>` over a hand-rolled dropdown:**
+Sheet handles focus trapping, backdrop dismiss, `Escape` key, scroll lock, `role="dialog"`, and `aria-modal` out of the box. Hand-rolling these correctly takes hours and is easy to get wrong for screen readers.
+
+**The final structure:**
+
+```
+Navbar (client component)
+├── Top bar
+│   ├── Logo                          always visible
+│   ├── Nav links   (hidden md:flex)  desktop only
+│   ├── Auth buttons (hidden md:flex) desktop only
+│   └── Hamburger   (md:hidden)       mobile only
+└── Sheet (right drawer)
+    ├── Nav links
+    └── Auth buttons (full-width, bottom-anchored)
+```
+
+</details>
+
+---
+
+<details>
+<summary><strong>34. Typing Props Precisely — Replacing <code>any</code></strong></summary>
+
+**The problem:** `({ userRole }: any)` opts out of type checking entirely. TypeScript will never catch a wrong value being passed.
+
+**The fix:** Type the prop to exactly match what the data source returns.
+
+`getCurrentUserRole()` returns `user?.role` — which is `Role | null | undefined`:
+
+| Value | When |
+|---|---|
+| `Role.ADMIN` or `Role.USER` | Authenticated, user exists in DB |
+| `null` | No Clerk session |
+| `undefined` | Authenticated but user record not yet in DB |
+
+**Why `Role` must be a regular import, not `import type`:**
+`import type` is erased entirely before the JS runs. `Role` is used as a **runtime value** in `=== Role.ADMIN` comparisons — if it's erased, the comparison throws a reference error at runtime. `import type` is only correct for types that are purely used as type annotations and never referenced in executed code.
+
+**The rule:** If a value from an import appears in a runtime expression (comparisons, function calls, `instanceof`), use a regular import. Use `import type` only when the import is used exclusively as a TypeScript type annotation.
+
+</details>
+
+---
+
 ## System Architecture
 
 <details>
