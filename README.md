@@ -791,3 +791,39 @@ modules/home/components/
 ---
 
 *Documentation is a living artifact — updated as understanding deepens.*
+
+---
+
+## System Architecture
+
+<details>
+<summary><strong>Create Problem Flow</strong></summary>
+
+```mermaid
+flowchart LR
+    A[Admin User]
+    B[Your Backend]
+    C[Judge0]
+    D[(Database)]
+
+    A -->|"Create Problem\ntitle, description,\ncode snippet,\ntest cases,\nreference solution"| B
+
+    B -->|"reference solution\n+ test cases"| C
+
+    C -->|"stdout, stderr,\nstatus per test case"| B
+
+    B --> G{Validation Gate\nAll test cases passed?}
+
+    G -->|"❌ Some failed\nreturn errors"| A
+    G -->|"✅ All passed"| D
+
+    D -->|"Problem persisted\nsuccess response"| A
+```
+
+**Key architectural rules this diagram enforces:**
+
+- **Judge0 never touches the database.** It is a pure execution sandbox — input goes in, stdout/stderr/status comes out. It has no knowledge of your schema, your auth, or your business rules.
+- **Your backend owns the validation gate.** Judge0 answers "here is what the code printed." Your backend answers "did all test cases produce the expected output?" That business logic lives in your code.
+- **Your backend is the only entity that writes to the database.** No third-party service gets a direct path to persistence — every external system communicates with your backend only.
+
+</details>
