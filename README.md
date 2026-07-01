@@ -790,10 +790,6 @@ modules/home/components/
 
 ---
 
-*Documentation is a living artifact — updated as understanding deepens.*
-
----
-
 <details>
 <summary><strong>28. Judge0 — The Code Execution Engine</strong></summary>
 
@@ -1059,5 +1055,73 @@ flowchart LR
 - **Judge0 never touches the database.** It is a pure execution sandbox — input goes in, stdout/stderr/status comes out. It has no knowledge of your schema, your auth, or your business rules.
 - **Your backend owns the validation gate.** Judge0 answers "here is what the code printed." Your backend answers "did all test cases produce the expected output?" That business logic lives in your code.
 - **Your backend is the only entity that writes to the database.** No third-party service gets a direct path to persistence — every external system communicates with your backend only.
+
+</details>
+
+---
+
+<details>
+<summary><strong>Create Problem — Detailed Request Lifecycle</strong></summary>
+
+This diagram zooms into the full request lifecycle: from the admin filling the form, through auth, validation, Judge0 execution, and final persistence.
+
+```mermaid
+flowchart TD
+    A[📝 Admin fills form]
+    B[✅ Validate client fields]
+    C["POST /api/create-problem"]
+
+    D{🔐 Clerk Auth\nDB Role = Admin?}
+
+    E[❌ 401 Unauthorized]
+
+    F[📦 Validate JSON Body]
+
+    G[⚖️ Judge0 Batch\nValidate Reference Solution]
+
+    H[❌ 400 Invalid Problem]
+
+    I["💾 prisma.problem.create()\nAttach userId"]
+
+    J[✅ 201 Created]
+
+    A --> B
+    B --> C
+    C --> D
+
+    D -->|No| E
+    D -->|Yes| F
+
+    F --> G
+
+    G -->|Failed| H
+    G -->|Passed| I
+
+    I --> J
+
+    classDef success fill:#d4edda,stroke:#2e7d32,color:#000;
+    classDef error fill:#f8d7da,stroke:#c62828,color:#000;
+    classDef process fill:#e3f2fd,stroke:#1565c0,color:#000;
+    classDef decision fill:#fff3cd,stroke:#ff8f00,color:#000;
+
+    class A,B,C,F,G,I process;
+    class D decision;
+    class J success;
+    class E,H error;
+```
+
+**Each gate and what it enforces:**
+
+| Step | Layer | Why it exists |
+|---|---|---|
+| Client field validation | Browser | Fast feedback before a network round-trip. Never the security boundary — just UX. |
+| Clerk Auth + DB Role check | Route Handler | The real security gate. Middleware alone is not enough — the handler must re-verify. A non-admin with a valid session would pass middleware but fail here. |
+| JSON body validation | Route Handler | Ensures the payload shape is correct before touching Judge0 or the DB. Rejects garbage early. |
+| Judge0 batch execution | External service | Verifies the reference solution actually solves all test cases. Prevents broken problems being published. |
+| `prisma.problem.create()` | Database | Only reached if every gate above passed. The `userId` is taken from the server-side auth call — never from the request body. |
+
+**The security rule this lifecycle enforces:**
+
+> The `userId` attached to the problem comes from `auth()` on the server, never from the request body. A client sending `{ userId: "someOtherUser" }` is ignored — the server substitutes the authenticated identity.
 
 </details>
