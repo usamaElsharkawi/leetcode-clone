@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
       tags,
       examples,
       constraints,
+      hints,
+      editorial,
       testCases,
       codeSnippets,
       referenceSolutions,
@@ -56,10 +58,10 @@ export async function POST(request: NextRequest) {
       const languageId = getJudge0languages(language);
 
       const submissions = testCases.map(({ input, output }) => ({
-        source_code: solutionCode,
+        source_code: Buffer.from(solutionCode as string).toString("base64"),
         language_id: languageId,
-        stdin: input,
-        expected_output: output,
+        stdin: Buffer.from(input).toString("base64"),
+        expected_output: Buffer.from(output).toString("base64"),
       }));
 
       const submissionResult = await submitBatch(submissions);
@@ -74,10 +76,12 @@ export async function POST(request: NextRequest) {
             {
               error: `Validation failed for ${language}`,
               testCase: {
-                input: submissions[i].stdin,
-                expectedOutput: submissions[i].expected_output,
-                actualOutput: result.stdout,
-                error: result.stderr || result.compile_output,
+                input: Buffer.from(submissions[i].stdin, "base64").toString("utf-8"),
+                expectedOutput: Buffer.from(submissions[i].expected_output, "base64").toString("utf-8"),
+                actualOutput: result.stdout ? Buffer.from(result.stdout, "base64").toString("utf-8") : null,
+                error: result.stderr 
+                  ? Buffer.from(result.stderr, "base64").toString("utf-8") 
+                  : (result.compile_output ? Buffer.from(result.compile_output, "base64").toString("utf-8") : null),
               },
               details: result,
             },
@@ -97,6 +101,8 @@ export async function POST(request: NextRequest) {
         tags,
         examples,
         constraints,
+        hints,
+        editorial,
         testCases,
         codeSnippets,
         referenceSolutions,
