@@ -1040,6 +1040,134 @@ Navbar (client component)
 
 ---
 
+## Project Structure
+
+```
+leetcode-clone/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Auth route group (sign-in, sign-up)
+│   ├── (root)/                   # Main app route group
+│   │   ├── problems/             # Problems listing page
+│   │   ├── profile/              # User profile page
+│   │   └── create-problem/         # Problem creation page
+│   ├── api/                      # API route handlers
+│   │   ├── create-problem/         # Problem creation endpoint
+│   │   ├── playlist/             # Playlist CRUD endpoints
+│   │   └── playlist/add-problem/   # Add problem to playlist
+│   ├── problem/[id]/             # Dynamic problem page
+│   ├── layout.tsx                # Root layout (ClerkProvider, ThemeProvider)
+│   └── proxy.ts                  # Clerk middleware
+│
+├── components/                   # Shared UI components
+│   └── ui/                       # shadcn/ui components
+│
+├── hooks/                        # Custom React hooks
+│   ├── use-problem.ts            # Fetch single problem
+│   ├── use-create-problem.ts     # Create problem hook
+│   └── use-mobile.ts             # Mobile detection hook
+│
+├── lib/                          # Core utilities
+│   ├── db.ts                     # Prisma client singleton
+│   ├── judge0.ts                 # Judge0 API client
+│   ├── utils.ts                  # Utility functions
+│   └── data/                     # Server actions
+│       ├── problems.ts           # Problem CRUD, code execution
+│       └── user.ts               # User auth utilities
+│
+├── modules/                      # Feature modules
+│   ├── auth/                     # Authentication
+│   ├── home/                     # Landing page components
+│   ├── problems/                 # Problem-related components
+│   │   ├── component/            # Problem UI components
+│   │   ├── hooks/                # Problem hooks
+│   │   └── schemas/              # Zod validation schemas
+│   └── profile/                  # Profile page components
+│
+├── prisma/                       # Database
+│   ├── schema.prisma             # Data models
+│   └── migrations/               # SQL migration files
+│
+├── providers/                    # Context providers
+│   └── theme-provider.tsx        # Theme context
+│
+└── public/                       # Static assets
+    ├── preview1.png              # App screenshots
+    └── ...
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Framework** | Next.js 16 | React framework with App Router |
+| **Language** | TypeScript | Type-safe JavaScript |
+| **Database** | PostgreSQL | Relational database |
+| **ORM** | Prisma | Type-safe database client |
+| **Auth** | Clerk | User management & authentication |
+| **Code Editor** | Monaco | VS Code editor in browser |
+| **Code Execution** | Judge0 | Sandboxed code execution |
+| **UI** | shadcn/ui | Accessible component library |
+| **Styling** | Tailwind CSS | Utility-first CSS framework |
+| **State** | React Hooks | Client-side state management |
+| **Validation** | Zod | Schema validation |
+| **HTTP Client** | Axios | API requests |
+
+---
+
+## How to Run the Project
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL database (or Neon account)
+- Clerk account (for auth)
+- RapidAPI account (for Judge0)
+
+### 1. Clone and Install
+```bash
+git clone https://github.com/usamaElsharkawi/leetcode-clone.git
+cd leetcode-clone
+npm install
+```
+
+### 2. Environment Variables
+Create `.env` file:
+```env
+DATABASE_URL="postgresql://..."
+CLERK_SECRET_KEY="sk_..."
+CLERK_PUBLISHABLE_KEY="pk_..."
+JUDGE0_API_KEY="your-rapidapi-key"
+JUDGE0_API_HOST="judge029.p.rapidapi.com"
+```
+
+### 3. Database Setup
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev
+
+# (Optional) View database
+npx prisma studio
+```
+
+### 4. Start Development Server
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the app.
+
+### 5. Build for Production
+```bash
+npm run build
+npm start
+```
+
+---
+
 ## System Architecture
 
 <details>
