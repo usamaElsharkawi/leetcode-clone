@@ -20,6 +20,10 @@ export async function getCurrentUserData() {
     return null
   }
   return await prisma.user.findUnique({
-    where: { clerkId: userId }
+    where: { clerkId: userId },include:{
+      submissions:true,
+      solvedProblems:true,
+      playlists:true,
+    }
   })
 }

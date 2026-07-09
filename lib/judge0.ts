@@ -36,10 +36,10 @@ export async function submitBatch(submissions: Submission[]) {
   const options = {
     method: "POST",
   url: 'https://judge029.p.rapidapi.com/submissions/batch',
-    params: { base64_encoded: "true" },
+    params: { base64_encoded: "false" },
        headers: {
-    'x-rapidapi-key': '98346ae9c6msh8ca19ee585da6bdp1afbb2jsndea69c9caecc',
-    'x-rapidapi-host': 'judge029.p.rapidapi.com',
+    'x-rapidapi-key': process.env.JUDGE0_API_KEY,
+    'x-rapidapi-host': process.env.JUDGE0_API_HOST,
     'Content-Type': 'application/json'
   },
 
@@ -61,12 +61,12 @@ export async function pollBatchResult(tokens: string[]) {
   url: 'https://judge029.p.rapidapi.com/submissions/batch',
     params: {
       tokens: tokens.join(","),
-      base64_encoded: "true",
+      base64_encoded: "false",
       fields: "*",
     },
        headers: {
-    'x-rapidapi-key': '98346ae9c6msh8ca19ee585da6bdp1afbb2jsndea69c9caecc',
-    'x-rapidapi-host': 'judge029.p.rapidapi.com',
+    'x-rapidapi-key': process.env.JUDGE0_API_KEY,
+    'x-rapidapi-host': process.env.JUDGE0_API_HOST,
     'Content-Type': 'application/json'
   }
   };
