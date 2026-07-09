@@ -5,6 +5,22 @@
 
 ---
 
+## Preview
+
+Here is a preview of the application:
+
+<!-- Please save the images you pasted into the `public/` folder and replace these paths if they differ -->
+<div align="center">
+  <img src="./public/preview1.png" alt="Preview 1" width="400" />
+  <img src="./public/preview2.png" alt="Preview 2" width="400" />
+</div>
+<div align="center">
+  <img src="./public/preview3.png" alt="Preview 3" width="400" />
+  <img src="./public/preview4.png" alt="Preview 4" width="400" />
+</div>
+
+---
+
 ## Learning Concepts
 
 <details>
